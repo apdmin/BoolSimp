@@ -1,14 +1,17 @@
 //package hw3
 
-class ExpressionTree(var root: String, var left: String, var right: String) {
+class ExpressionTree(val root: String, val left: ExpressionTree, val right: ExpressionTree) {
 
+  /*
   def isEmpty: Boolean = {
     if (root == null) return true
     return false;
   }
 
   def expressionType: String = root
+  */
 
+  /*
   def isValidExpression: Boolean = {
     if (left == null) return false
     if (((root equals "and") || (root equals "or")) && right == null) return false
@@ -20,4 +23,5 @@ class ExpressionTree(var root: String, var left: String, var right: String) {
       case _ => return false
     }
   }
+  */
 }

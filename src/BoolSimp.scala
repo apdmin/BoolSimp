@@ -165,8 +165,8 @@ object BoolSimp {
   }
 
   def main(args: Array[String]) {
-    val test = new ExpressionTree("string", "String 2", "string 3")
-    test.isEmpty
+    val test = new ExpressionTree("string", null, null)
+    println(test.root)
     println(introString)
     //println(p1.root)
     stringToExpressionTree("   SomeString)")
