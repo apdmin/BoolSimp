@@ -150,26 +150,77 @@ object BoolSimp {
       println("| Expression String: " + "%-37s |".format(expressionString))
     }
     //Trim the expressionString
-    val trimmedExpressionString = expressionString.trim
+    var normalizedES = expressionString.trim
+    normalizedES = normalizeExpressionString(normalizedES)
     if (DEBUG) {
-      println("| Trimmed Version: " + "%-39s |".format(trimmedExpressionString))
+      println("| Normalized Version: " + "%-36s |".format(normalizedES))
     }
-    if (trimmedExpressionString(0) != '(' || trimmedExpressionString(trimmedExpressionString.length-1) != ')') {
+    if (normalizedES(0) != '(' || normalizedES(normalizedES.length-1) != ')') {
       println("|..........................................................|")
       println("| That is not a valid expression. All expressions must     |")
       println("| be enclosed by parenthesis.                              |")
       println(" ---------------------------------------------------------- ")
     }
-    val expressionTree = new ExpressionTree("and", null, null)
+    //Figure out which expression tree to create
+    var expressionTree: ExpressionTree = null
+    if (normalizedES.substring(1, 4) == "and") {
+      expressionTree = createAndExpression(normalizedES.substring(5, 6), normalizedES.substring(7, 8))
+      println(expressionTree)
+    } else if (normalizedES.substring(1, 3) == "or") {
+      expressionTree = createOrExpression(normalizedES.substring(4, 5), normalizedES.substring(6, 7))
+      println(expressionTree)
+    } else if (normalizedES.substring(1, 4) == "not") {
+      expressionTree = createNotExpression(normalizedES.substring(5, 6))
+      println(expressionTree)
+    }
     return expressionTree
   }
 
+  def createAndExpression(left: String, right: String): ExpressionTree = {
+    val l = new ExpressionTree(left, null, null)
+    val r = new ExpressionTree(right, null, null)
+    new ExpressionTree("and", l, r)
+  }
+
+  def createOrExpression(left: String, right: String): ExpressionTree = {
+    val l = new ExpressionTree(left, null, null)
+    val r = new ExpressionTree(right, null, null)
+    new ExpressionTree("or", l, r)
+  }
+
+  def createNotExpression(argument: String): ExpressionTree = {
+    val arg = new ExpressionTree(argument, null, null)
+    new ExpressionTree("not", arg, null)
+  }
+
+  def normalizeExpressionString(expression: String): String = {
+    var output = ""
+    val length = expression.length
+    var currentChar = '~'
+    var lastChar = '~'
+    for (i <- 0 until length) {
+      lastChar = currentChar
+      currentChar = expression.charAt(i)
+      if (lastChar == ' ' && currentChar == ' ') {
+      } else if (lastChar == '(' && currentChar == ' ') {
+      } else if (lastChar == ' ' && currentChar == ')') {
+        output = output.substring(0, (output.length-1))
+        output = output + currentChar
+      } else if (lastChar != '~' && lastChar != ' ' && currentChar == '(') {
+        output = output + ' ' + currentChar
+      } else {
+        output = output + currentChar
+      }
+    }
+    return output
+  }
+
+
   def main(args: Array[String]) {
-    val test = new ExpressionTree("string", null, null)
-    println(test.root)
+    val andExpression = createAndExpression("1", "0")
     println(introString)
     //println(p1.root)
-    stringToExpressionTree("   SomeString)")
+    stringToExpressionTree("  ( and  1  ( or(not 1)    1  ) )")
     /*
     println("p1 = " + p1)
     println("head = " + p1.head)
