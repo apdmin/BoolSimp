@@ -161,9 +161,37 @@ object BoolSimp {
       println("| be enclosed by parenthesis.                              |")
       println(" ---------------------------------------------------------- ")
     }
+
+    /*
+    Algorithm:
+      • Parse through the string.
+      • If you see an open paren, need to instantiate a new ExpressionTree
+    */
+
+    //Can assume the first character is an open paren
+    if (normalizedES.charAt(0) != '(')
+      throw new Error("First character: '" + normalizedES.charAt(0) + "' was not an open parenthesis")
+    //Since the first character is an open paren, we can create an ExpressionTree right away
     //Figure out which expression tree to create
     var expressionTree: ExpressionTree = null
     if (normalizedES.substring(1, 4) == "and") {
+      //Extract the first and second parameters
+      val firstParam = extractFirstParam(normalizedES)
+      val secondParam = extractSecondParam(normalizedES)
+
+      //Check to see if the first parameter is an actual parameter or is another expressionTree
+      //    (  a  n  d     (  o  r...
+      //    0  1  2  3  4  5  6  7
+      //                   ^
+      if (normalizedES.charAt(5) == '(') {
+        //We have an expressionTree
+        //Check the second parameter
+      } else if (normalizedES.charAt(6) == ' ') {
+        //We have a single character parameter
+        //Check the second parameter
+      } else {
+        throw new Error("First parameter is invalid")
+      }
       expressionTree = createAndExpression(normalizedES.substring(5, 6), normalizedES.substring(7, 8))
       println(expressionTree)
     } else if (normalizedES.substring(1, 3) == "or") {
@@ -175,6 +203,30 @@ object BoolSimp {
     }
     return expressionTree
   }
+
+  def extractFirstParam(expression: String): String = {
+    //We can assume the given expression has already been normalized
+    if (expression.substring(1, 4) == "and") {
+      var param = ""
+      var parenCount = 0
+      var index = 5;
+      do {
+        if (expression.charAt(index) == '(')
+          parenCount += 1
+        else if (expression.charAt(index) == ')')
+          parenCount -= 1
+        param = param + expression.charAt(index)
+        index += 1
+      } while (parenCount > 0)
+      return param
+    }
+    throw new Error ("extractFirstParam encountered an error that prevented it from working")
+  }
+  def extractSecondParam(expression: String): String = {
+    //We can assume the given expression has already been normalized
+    return ""
+  }
+
 
   def createAndExpression(left: String, right: String): ExpressionTree = {
     val l = new ExpressionTree(left, null, null)
@@ -219,24 +271,8 @@ object BoolSimp {
   def main(args: Array[String]) {
     val andExpression = createAndExpression("1", "0")
     println(introString)
+    println(extractFirstParam("(and (or 1 (not 0)) 0)"))
     //println(p1.root)
-    stringToExpressionTree("  ( and  1  ( or(not 1)    1  ) )")
-    /*
-    println("p1 = " + p1)
-    println("head = " + p1.head)
-    println("p1.init = " + p1.init)
-    println("p1.isEmpty = " + p1.isEmpty)
-    println("p1.last = " + p1.last)
-    println("p1.last.getClass() = " + p1.last.getClass())
-    println("List.getClass() = " + List.getClass())
-    val p1List = p1.last.asInstanceOf[List[Any]]
-    println("p1List = " + p1List)
-    println("p1List.getClass() = " + p1List.getClass())
-    println("p1.length = " + p1.length)
-    println("p1.reverse = " + p1.reverse)
-    println("p1.tail = " + p1.tail)
-    println("p1.tail.tail = " + p1.tail.tail)
-    println("p1.tail.tail.head = " + p1.tail.tail.head)
-    */
+    //stringToExpressionTree("  ( and  1  ( or(not 1)    1  ) )")
   }
 }
