@@ -206,10 +206,16 @@ object BoolSimp {
 
   def extractFirstParam(expression: String): String = {
     //We can assume the given expression has already been normalized
-    if (expression.substring(1, 4) == "and") {
+    if (expression.substring(1, 4) == "and"
+        || expression.substring(1, 3) == "or"
+        || expression.substring(1, 4) == "not") {
       var param = ""
       var parenCount = 0
-      var index = 5;
+      var index = 0
+      if (expression.substring(1, 4) == "and" || expression.substring(1, 4) == "not")
+        index = 5
+      else
+        index = 4
       do {
         if (expression.charAt(index) == '(')
           parenCount += 1
@@ -271,7 +277,7 @@ object BoolSimp {
   def main(args: Array[String]) {
     val andExpression = createAndExpression("1", "0")
     println(introString)
-    println(extractFirstParam("(and (or 1 (not 0)) 0)"))
+    println(extractFirstParam("(not (or 1 (not 0)))"))
     //println(p1.root)
     //stringToExpressionTree("  ( and  1  ( or(not 1)    1  ) )")
   }
