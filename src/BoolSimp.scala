@@ -140,15 +140,38 @@ object BoolSimp {
   val thanks = "\n--- Thank you for using BoolSimp! ---\n\n"
 
   val p1S = List("and", 'x', List("or", 'x', List("and", 'y', List("not", 'z'))))
-  val p1 = new ExpressionTree("and", null, null)
+  val p1FirstParam = new ExpressionTree("x", null, null)
+  val p1SecondParam = new ExpressionTree(
+      "or",
+      (new ExpressionTree("x", null, null)),
+      (new ExpressionTree
+        (
+          "and",
+          (new ExpressionTree("y", null, null)),
+          (new ExpressionTree
+            (
+              "not",
+              (new ExpressionTree("z", null, null)),
+              null
+            )
+          )
+        )
+      )
+    )
+  val p1 = new ExpressionTree("and", p1FirstParam, p1SecondParam)
+  val p2 = stringToExpressionTree("(and (and z 0) (or x 1))")
+  val p3 = stringToExpressionTree("(or 1 a)")
+
+
+
+
+
 
   def stringToExpressionTree(expressionString: String): ExpressionTree = {
-    if (DEBUG) {
-      println(" ---------------------------------------------------------- ")
-      println("| Beginning call to stringToExpressionTree                 |")
-      println("|----------------------------------------------------------|")
-      println("| Expression String: " + "%-37s |".format(expressionString))
-    }
+    println(" ---------------------------------------------------------- ")
+    println("| Beginning call to stringToExpressionTree                 |")
+    println("|----------------------------------------------------------|")
+    println("| Expression String: " + "%-37s |".format(expressionString))
     //Trim the expressionString
     var normalizedES = expressionString.trim
     normalizedES = normalizeExpressionString(normalizedES)
@@ -174,35 +197,84 @@ object BoolSimp {
     //Since the first character is an open paren, we can create an ExpressionTree right away
     //Figure out which expression tree to create
     var expressionTree: ExpressionTree = null
-    if (normalizedES.substring(1, 4) == "and") {
+    if (normalizedES.substring(1, 4) == "and" || normalizedES.substring(1, 3) == "or") {
       //Extract the first and second parameters
       val firstParam = extractFirstParam(normalizedES)
       val secondParam = extractSecondParam(normalizedES)
+      var firstParamTree: ExpressionTree = null
+      var secondParamTree: ExpressionTree = null
+      if (firstParam.charAt(0) != '(')
+        firstParamTree = new ExpressionTree(firstParam, null, null)
+      else
+        firstParamTree = stringToExpressionTree(firstParam)
+      if (secondParam.charAt(0) != '(')
+        secondParamTree = new ExpressionTree(secondParam, null, null)
+      else
+        secondParamTree = stringToExpressionTree(secondParam)
+      if (normalizedES.substring(1, 4) == "and")
+        expressionTree = createAndExpression(firstParamTree, secondParamTree)
+      else
+        expressionTree = createOrExpression(firstParamTree, secondParamTree)
+      return expressionTree
+    } else if (normalizedES.substring(1, 4) == "not") {
+      val firstParam = extractFirstParam(normalizedES)
+      var firstParamTree: ExpressionTree = null
+      if (firstParam.charAt(0) != '(')
+        firstParamTree = new ExpressionTree(firstParam, null, null)
+      else
+        firstParamTree = stringToExpressionTree(firstParam)
+      expressionTree = createNotExpression(firstParamTree)
+      return expressionTree
+    } else {
+      throw new Error ("Shouldn't have gotten here")
+    }
 
       //Check to see if the first parameter is an actual parameter or is another expressionTree
       //    (  a  n  d     (  o  r...
       //    0  1  2  3  4  5  6  7
       //                   ^
-      if (normalizedES.charAt(5) == '(') {
-        //We have an expressionTree
-        //Check the second parameter
-      } else if (normalizedES.charAt(6) == ' ') {
-        //We have a single character parameter
-        //Check the second parameter
-      } else {
-        throw new Error("First parameter is invalid")
-      }
-      expressionTree = createAndExpression(normalizedES.substring(5, 6), normalizedES.substring(7, 8))
-      println(expressionTree)
-    } else if (normalizedES.substring(1, 3) == "or") {
-      expressionTree = createOrExpression(normalizedES.substring(4, 5), normalizedES.substring(6, 7))
-      println(expressionTree)
-    } else if (normalizedES.substring(1, 4) == "not") {
-      expressionTree = createNotExpression(normalizedES.substring(5, 6))
-      println(expressionTree)
-    }
-    return expressionTree
   }
+
+
+  def expressionTreeToString(expressionTree: ExpressionTree): String = {
+    var output = "("
+    if (expressionTree.root == "and" || expressionTree.root == "or") {
+      //Generate First Parameter
+      var firstParam = ""
+      if (expressionTree.left == null)
+        throw new Error ("expressionTree.left == null when it shouldn't be.")
+      if (expressionTree.left.left == null)
+        firstParam = expressionTree.left.root
+      else
+        firstParam = expressionTreeToString(expressionTree.left)
+
+      //Generate Second Parameter
+      var secondParam = ""
+      if (expressionTree.right == null)
+        throw new Error ("expressionTree.right == null when it shouldn't be.")
+      if (expressionTree.right.left == null)
+        secondParam = expressionTree.right.root
+      else
+        secondParam = expressionTreeToString(expressionTree.right)
+
+      output = output + expressionTree.root + " " + firstParam + " " + secondParam + ")"
+    } else if (expressionTree.root == "not") {
+      //Generate Parameter
+      var param = ""
+      if (expressionTree.left == null)
+        throw new Error ("expressionTree.left == null when it shouldn't be.")
+      if (expressionTree.left.left == null)
+        param = expressionTree.left.root
+      else
+        param = expressionTreeToString(expressionTree.left)
+
+      output = output + expressionTree.root + " " + param + ")"
+    }
+    return output
+  }
+
+
+
 
   def extractFirstParam(expression: String): String = {
     //We can assume the given expression has already been normalized
@@ -228,6 +300,7 @@ object BoolSimp {
     }
     throw new Error ("extractFirstParam encountered an error that prevented it from working")
   }
+
   def extractSecondParam(expression: String): String = {
     //We can assume the given expression has already been normalized
     //Need to pass over the first parameter
@@ -270,22 +343,36 @@ object BoolSimp {
   }
 
 
+
+
+
   def createAndExpression(left: String, right: String): ExpressionTree = {
     val l = new ExpressionTree(left, null, null)
     val r = new ExpressionTree(right, null, null)
-    new ExpressionTree("and", l, r)
+    return createAndExpression(l, r)
+  }
+  def createAndExpression(left: ExpressionTree, right: ExpressionTree): ExpressionTree = {
+    return new ExpressionTree("and", left, right)
   }
 
   def createOrExpression(left: String, right: String): ExpressionTree = {
     val l = new ExpressionTree(left, null, null)
     val r = new ExpressionTree(right, null, null)
-    new ExpressionTree("or", l, r)
+    return createOrExpression(l, r)
+  }
+  def createOrExpression(left: ExpressionTree, right: ExpressionTree): ExpressionTree = {
+    return new ExpressionTree("or", left, right)
   }
 
   def createNotExpression(argument: String): ExpressionTree = {
     val arg = new ExpressionTree(argument, null, null)
-    new ExpressionTree("not", arg, null)
+    return createNotExpression(arg)
   }
+  def createNotExpression(argument: ExpressionTree): ExpressionTree = {
+    return new ExpressionTree("not", argument, null)
+  }
+
+
 
   def normalizeExpressionString(expression: String): String = {
     var output = ""
@@ -310,12 +397,19 @@ object BoolSimp {
   }
 
 
+
+
   def main(args: Array[String]) {
     val andExpression = createAndExpression("1", "0")
     println(introString)
-    val expression = "(not (not 1) (or 1 0))"
+    val expression = "(and x (or x (and y (not z))))"
     println("First Parameter = '" + extractFirstParam(expression) + "'")
     println("Second Parameter = '" + extractSecondParam(expression) + "'")
+    println(stringToExpressionTree(expression))
+    println(p1)
+    println("p1 = " + expressionTreeToString(p1))
+    println("p2 = " + expressionTreeToString(p2))
+    println("p3 = " + expressionTreeToString(p3))
     //println(p1.root)
     //stringToExpressionTree("  ( and  1  ( or(not 1)    1  ) )")
   }
