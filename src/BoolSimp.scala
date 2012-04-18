@@ -5,7 +5,7 @@ object BoolSimp {
 
   val DEBUG = true;
 
-    val introString = """
+  val introString = """
    --------------------------------------------------------------------------
  /--------------------------------- BoolSimp --------------------------------\
 |------------------------------------------------------------------------------|
@@ -237,7 +237,7 @@ object BoolSimp {
 
 
   def expressionTreeToString(expressionTree: ExpressionTree): String = {
-    var output = "("
+    var output = ""
     if (expressionTree.root == "and" || expressionTree.root == "or") {
       //Generate First Parameter
       var firstParam = ""
@@ -257,7 +257,7 @@ object BoolSimp {
       else
         secondParam = expressionTreeToString(expressionTree.right)
 
-      output = output + expressionTree.root + " " + firstParam + " " + secondParam + ")"
+      output = output + "(" + expressionTree.root + " " + firstParam + " " + secondParam + ")"
     } else if (expressionTree.root == "not") {
       //Generate Parameter
       var param = ""
@@ -268,7 +268,9 @@ object BoolSimp {
       else
         param = expressionTreeToString(expressionTree.left)
 
-      output = output + expressionTree.root + " " + param + ")"
+      output = output + "(" + expressionTree.root + " " + param + ")"
+    } else {
+      output = expressionTree.root
     }
     return output
   }
@@ -397,12 +399,89 @@ object BoolSimp {
   }
 
 
+  def simplifyExpression(expression: ExpressionTree): ExpressionTree = {
+    //This method recursively simplifies a boolean expression
+    if (expression.root == "or") {
+      return simplifyOrExpression(expression)
+    } else if (expression.root == "and") {
+      return simplifyAndExpression(expression)
+    } else if (expression.root == "not") {
+      return simplifyNotExpression(expression)
+    } else {
+      return expression
+    }
+  }
+
+  def simplifyOrExpression(orExpression: ExpressionTree): ExpressionTree = {
+    //This method simplifies OR expressions using identies such as (or 1 x) == 1
+    //Can safely assume that the given or expression is indeed an or expression
+    val firstParameter = simplifyExpression(orExpression.left)
+    val secondParameter = simplifyExpression(orExpression.right)
+    val firstParamString = expressionTreeToString(firstParameter)
+    val secondParamString = expressionTreeToString(secondParameter)
+
+    if (firstParamString == "0")
+      return secondParameter
+    else if (secondParamString == "0")
+      return firstParameter
+    else if (firstParamString == "1" || secondParamString == "1")
+      return new ExpressionTree("1", null, null)
+    else if (firstParamString == secondParamString)
+      return firstParameter
+    else
+      return new ExpressionTree("or", firstParameter, secondParameter)
+  }
+
+  def simplifyAndExpression(andExpression: ExpressionTree): ExpressionTree = {
+    val firstParameter = simplifyExpression(andExpression.left)
+    val secondParameter = simplifyExpression(andExpression.right)
+    val firstParamString = expressionTreeToString(firstParameter)
+    val secondParamString = expressionTreeToString(secondParameter)
+
+    if (firstParamString == "0" || secondParamString == "0")
+      return new ExpressionTree("0", null, null)
+    else if (firstParamString == "1")
+      return secondParameter
+    else if (secondParamString == "1")
+      return firstParameter
+    else if (firstParamString == secondParamString)
+      return firstParameter
+    else
+      return new ExpressionTree("and", firstParameter, secondParameter)
+  }
+
+  def simplifyNotExpression(notExpression: ExpressionTree): ExpressionTree = {
+    val parameter = simplifyExpression(notExpression.left)
+    val paramString = expressionTreeToString(parameter)
+
+    if (paramString == "1")
+      return new ExpressionTree("0", null, null)
+    else if (paramString == "0")
+      return new ExpressionTree("1", null, null)
+    if (paramString.charAt(0) != '(')
+      return new ExpressionTree("not", parameter, null)
+
+    //If we've gotten here, we know we are taking the compliment of another expression
+    if (paramString.substring(1, 4) == "and") {
+      return new ExpressionTree("or",
+                                new ExpressionTree("not", parameter.left, null),
+                                new ExpressionTree("not", parameter.right, null)
+                               )
+    } else if (paramString.substring(1, 3) == "or") {
+      return new ExpressionTree("and",
+                                new ExpressionTree("not", parameter.left, null),
+                                new ExpressionTree("not", parameter.right, null)
+                               )
+    } else {
+      return new ExpressionTree("not", parameter, null)
+    }
+  }
 
 
   def main(args: Array[String]) {
     val andExpression = createAndExpression("1", "0")
     println(introString)
-    val expression = "(and x (or x (and y (not z))))"
+    val expression = "(and x 1)"
     println("First Parameter = '" + extractFirstParam(expression) + "'")
     println("Second Parameter = '" + extractSecondParam(expression) + "'")
     println(stringToExpressionTree(expression))
@@ -410,6 +489,17 @@ object BoolSimp {
     println("p1 = " + expressionTreeToString(p1))
     println("p2 = " + expressionTreeToString(p2))
     println("p3 = " + expressionTreeToString(p3))
+    println("-------Time to test----------")
+    println("We start with this expression: " + expression)
+    val expressionTree = stringToExpressionTree(expression)
+    println("After converting the expression to an ExpressionTree and then")
+    println("converting it back, we get: " +
+            expressionTreeToString(expressionTree)
+           )
+    val simplifiedExpressionTree = simplifyExpression(expressionTree)
+    println(expressionTree)
+    println(simplifiedExpressionTree)
+    println(expressionTreeToString(simplifiedExpressionTree))
     //println(p1.root)
     //stringToExpressionTree("  ( and  1  ( or(not 1)    1  ) )")
   }
