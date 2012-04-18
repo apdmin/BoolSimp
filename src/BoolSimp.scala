@@ -1,5 +1,6 @@
 //package hw3
 //import hw3.ExpressionTree
+import scala.io.Source
 
 object BoolSimp {
 
@@ -481,6 +482,7 @@ object BoolSimp {
   def main(args: Array[String]) {
     val andExpression = createAndExpression("1", "0")
     println(introString)
+    /*
     val expression = "(and x 1)"
     println("First Parameter = '" + extractFirstParam(expression) + "'")
     println("Second Parameter = '" + extractSecondParam(expression) + "'")
@@ -491,15 +493,24 @@ object BoolSimp {
     println("p3 = " + expressionTreeToString(p3))
     println("-------Time to test----------")
     println("We start with this expression: " + expression)
-    val expressionTree = stringToExpressionTree(expression)
+    //val expressionTree = stringToExpressionTree(expression)
     println("After converting the expression to an ExpressionTree and then")
     println("converting it back, we get: " +
             expressionTreeToString(expressionTree)
            )
-    val simplifiedExpressionTree = simplifyExpression(expressionTree)
+    //val simplifiedExpressionTree = simplifyExpression(expressionTree)
     println(expressionTree)
     println(simplifiedExpressionTree)
     println(expressionTreeToString(simplifiedExpressionTree))
+    */
+    var command = ""
+    do {
+      command = readLine("\nEnter a Command -> ")
+      //Convert command to expressionTree
+      val expressionTree = stringToExpressionTree(command)
+      val simplifiedExpressionTree = simplifyExpression(expressionTree)
+      println(expressionTreeToString(simplifiedExpressionTree))
+    } while (command != "quit")
     //println(p1.root)
     //stringToExpressionTree("  ( and  1  ( or(not 1)    1  ) )")
   }
