@@ -230,7 +230,43 @@ object BoolSimp {
   }
   def extractSecondParam(expression: String): String = {
     //We can assume the given expression has already been normalized
-    return ""
+    //Need to pass over the first parameter
+    if (expression.substring(1, 4) == "and" || expression.substring(1, 3) == "or") {
+      var param = ""
+      var parenCount = 0
+      var index = 0
+      if (expression.substring(1, 4) == "and")
+        index = 5
+      else
+        index = 4
+      if (expression.charAt(index) == '(') {
+        //The first parameter must be, in this case, an expression itself.
+        do {
+          if (expression.charAt(index) == '(')
+            parenCount += 1
+          else if (expression.charAt(index) == ')')
+            parenCount -= 1
+          index += 1
+        } while (parenCount > 0)
+        //Once we get here, make sure parenCount is zero
+        parenCount = 0
+        index += 1
+      } else {
+        //The first parameter is a single character and therefore the second parameter
+        //starts two indices later
+        index += 2
+      }
+      do {
+        if (expression.charAt(index) == '(')
+          parenCount += 1
+        else if (expression.charAt(index) == ')')
+          parenCount -= 1
+        param = param + expression.charAt(index)
+        index += 1
+      } while (parenCount > 0)
+      return param
+    }
+    throw new Error ("No second parameter should exist in the given expression.")
   }
 
 
@@ -277,7 +313,9 @@ object BoolSimp {
   def main(args: Array[String]) {
     val andExpression = createAndExpression("1", "0")
     println(introString)
-    println(extractFirstParam("(not (or 1 (not 0)))"))
+    val expression = "(not (not 1) (or 1 0))"
+    println("First Parameter = '" + extractFirstParam(expression) + "'")
+    println("Second Parameter = '" + extractSecondParam(expression) + "'")
     //println(p1.root)
     //stringToExpressionTree("  ( and  1  ( or(not 1)    1  ) )")
   }
