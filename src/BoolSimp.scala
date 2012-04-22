@@ -140,6 +140,7 @@ object BoolSimp {
 
   val thanks = "\n--- Thank you for using BoolSimp! ---\n\n"
 
+
   val p1S = List("and", 'x', List("or", 'x', List("and", 'y', List("not", 'z'))))
   val p1FirstParam = new ExpressionTree("x", null, null)
   val p1SecondParam = new ExpressionTree(
@@ -163,27 +164,34 @@ object BoolSimp {
   val p2 = stringToExpressionTree("(and (and z 0) (or x 1))")
   val p3 = stringToExpressionTree("(or 1 a)")
 
-
+//--------------------------------------------------------------------------
 
 
 
 
   def stringToExpressionTree(expressionString: String): ExpressionTree = {
-    println(" ---------------------------------------------------------- ")
-    println("| Beginning call to stringToExpressionTree                 |")
-    println("|----------------------------------------------------------|")
-    println("| Expression String: " + "%-37s |".format(expressionString))
-    //Trim the expressionString
-    var normalizedES = expressionString.trim
-    normalizedES = normalizeExpressionString(normalizedES)
-    if (DEBUG) {
-      println("| Normalized Version: " + "%-36s |".format(normalizedES))
-    }
-    if (normalizedES(0) != '(' || normalizedES(normalizedES.length-1) != ')') {
-      println("|..........................................................|")
-      println("| That is not a valid expression. All expressions must     |")
-      println("| be enclosed by parenthesis.                              |")
+    val DEBUG_THIS = false
+    if (DEBUG_THIS) {
       println(" ---------------------------------------------------------- ")
+      println("| Beginning call to stringToExpressionTree                 |")
+      println("|----------------------------------------------------------|")
+      println("| Expression String: " + "%-37s |".format(expressionString))
+    }
+    //Trim and normalized the expression string
+      var normalizedES = expressionString.trim
+      normalizedES = normalizeExpressionString(normalizedES)
+
+    if (!isValidExpression(normalizedES))
+      throw new Error("stringToExpressionTree received an invalid expression string")
+
+    if (DEBUG_THIS) {
+      println("| Normalized Version: " + "%-36s |".format(normalizedES))
+      if (normalizedES(0) != '(' || normalizedES(normalizedES.length-1) != ')') {
+        println("|..........................................................|")
+        println("| That is not a valid expression. All expressions must     |")
+        println("| be enclosed by parenthesis.                              |")
+        println(" ---------------------------------------------------------- ")
+      }
     }
 
     /*
@@ -192,49 +200,63 @@ object BoolSimp {
       • If you see an open paren, need to instantiate a new ExpressionTree
     */
 
-    //Can assume the first character is an open paren
-    if (normalizedES.charAt(0) != '(')
-      throw new Error("First character: '" + normalizedES.charAt(0) + "' was not an open parenthesis")
     //Since the first character is an open paren, we can create an ExpressionTree right away
     //Figure out which expression tree to create
     var expressionTree: ExpressionTree = null
+
+
     if (normalizedES.substring(1, 4) == "and" || normalizedES.substring(1, 3) == "or") {
       //Extract the first and second parameters
-      val firstParam = extractFirstParam(normalizedES)
-      val secondParam = extractSecondParam(normalizedES)
-      var firstParamTree: ExpressionTree = null
-      var secondParamTree: ExpressionTree = null
-      if (firstParam.charAt(0) != '(')
-        firstParamTree = new ExpressionTree(firstParam, null, null)
-      else
-        firstParamTree = stringToExpressionTree(firstParam)
-      if (secondParam.charAt(0) != '(')
-        secondParamTree = new ExpressionTree(secondParam, null, null)
-      else
-        secondParamTree = stringToExpressionTree(secondParam)
-      if (normalizedES.substring(1, 4) == "and")
-        expressionTree = createAndExpression(firstParamTree, secondParamTree)
-      else
-        expressionTree = createOrExpression(firstParamTree, secondParamTree)
-      return expressionTree
-    } else if (normalizedES.substring(1, 4) == "not") {
-      val firstParam = extractFirstParam(normalizedES)
-      var firstParamTree: ExpressionTree = null
-      if (firstParam.charAt(0) != '(')
-        firstParamTree = new ExpressionTree(firstParam, null, null)
-      else
-        firstParamTree = stringToExpressionTree(firstParam)
-      expressionTree = createNotExpression(firstParamTree)
-      return expressionTree
-    } else {
-      throw new Error ("Shouldn't have gotten here")
-    }
+        val firstParam = extractFirstParam(normalizedES)
+        val secondParam = extractSecondParam(normalizedES)
 
-      //Check to see if the first parameter is an actual parameter or is another expressionTree
-      //    (  a  n  d     (  o  r...
-      //    0  1  2  3  4  5  6  7
-      //                   ^
+      //Convert the first and second parameters to ExpressionTree objects
+        var firstParamTree: ExpressionTree = null
+        var secondParamTree: ExpressionTree = null
+        if (firstParam.charAt(0) != '(')
+          firstParamTree = new ExpressionTree(firstParam, null, null)
+        else
+          firstParamTree = stringToExpressionTree(firstParam)
+        if (secondParam.charAt(0) != '(')
+          secondParamTree = new ExpressionTree(secondParam, null, null)
+        else
+          secondParamTree = stringToExpressionTree(secondParam)
+  
+      //Create the overall ExpressionTree for the method call
+        if (normalizedES.substring(1, 4) == "and")
+          expressionTree = createAndExpression(firstParamTree, secondParamTree)
+        else
+          expressionTree = createOrExpression(firstParamTree, secondParamTree)
+        return expressionTree
+
+
+
+    } else if (normalizedES.substring(1, 4) == "not") {
+      //Extract the parameter
+        val firstParam = extractFirstParam(normalizedES)
+
+      //Convert the parameter to an ExpressionTree object
+        var firstParamTree: ExpressionTree = null
+        if (firstParam.charAt(0) != '(')
+          firstParamTree = new ExpressionTree(firstParam, null, null)
+        else
+          firstParamTree = stringToExpressionTree(firstParam)
+
+      //Create the overall ExpressionTree for the method call
+        expressionTree = createNotExpression(firstParamTree)
+        return expressionTree
+
+
+    } else {
+      throw new Error("stringToExpressionTree reached end of code without returning properly")
+    }
   }
+
+
+
+
+
+
 
 
   def expressionTreeToString(expressionTree: ExpressionTree): String = {
@@ -279,6 +301,13 @@ object BoolSimp {
 
 
 
+
+
+
+
+
+
+
   def extractFirstParam(expression: String): String = {
     //We can assume the given expression has already been normalized
     if (expression.substring(1, 4) == "and"
@@ -299,10 +328,14 @@ object BoolSimp {
         param = param + expression.charAt(index)
         index += 1
       } while (parenCount > 0)
+      if (expression.charAt(index) != ' ' && expression.charAt(index) != ')')
+        throw new Exception("Parameter was not a single character or an expression.")
       return param
     }
     throw new Error ("extractFirstParam encountered an error that prevented it from working")
   }
+
+
 
   def extractSecondParam(expression: String): String = {
     //We can assume the given expression has already been normalized
@@ -340,10 +373,15 @@ object BoolSimp {
         param = param + expression.charAt(index)
         index += 1
       } while (parenCount > 0)
+      if (expression.charAt(index) != ')')
+        throw new Exception("Parameter was neither a single charactor, nor an expression.")
       return param
     }
     throw new Error ("No second parameter should exist in the given expression.")
   }
+
+
+
 
 
 
@@ -377,6 +415,10 @@ object BoolSimp {
 
 
 
+
+
+
+
   def normalizeExpressionString(expression: String): String = {
     var output = ""
     val length = expression.length
@@ -400,6 +442,12 @@ object BoolSimp {
   }
 
 
+
+
+
+
+
+
   def simplifyExpression(expression: ExpressionTree): ExpressionTree = {
     //This method recursively simplifies a boolean expression
     if (expression.root == "or") {
@@ -412,6 +460,13 @@ object BoolSimp {
       return expression
     }
   }
+
+
+
+
+
+
+
 
   def simplifyOrExpression(orExpression: ExpressionTree): ExpressionTree = {
     //This method simplifies OR expressions using identies such as (or 1 x) == 1
@@ -433,6 +488,12 @@ object BoolSimp {
       return new ExpressionTree("or", firstParameter, secondParameter)
   }
 
+
+
+
+
+
+
   def simplifyAndExpression(andExpression: ExpressionTree): ExpressionTree = {
     val firstParameter = simplifyExpression(andExpression.left)
     val secondParameter = simplifyExpression(andExpression.right)
@@ -450,6 +511,13 @@ object BoolSimp {
     else
       return new ExpressionTree("and", firstParameter, secondParameter)
   }
+
+
+
+
+
+
+
 
   def simplifyNotExpression(notExpression: ExpressionTree): ExpressionTree = {
     val parameter = simplifyExpression(notExpression.left)
@@ -479,9 +547,235 @@ object BoolSimp {
   }
 
 
+
+
+
+
+
+
+
+  def evalxp (expression: String, bindings: Array[String]): String = {
+    println("\n" +
+" ---------------------------------------------------------- \n" +
+"| evalxp                                                   |\n" +
+"|----------------------------------------------------------|")
+
+    if (!isValidExpression(expression)) {
+      println("\n" +
+"| Invalid Expression: " + "%36s |".format(expression) + "\n" +
+"| Please check the help menu for proper syntax.            |\n" +
+" ---------------------------------------------------------- ")
+      return expression
+    }
+
+    println("" +
+"| Expression: " + "%-44s |".format(expression) + "\n" +
+"| Bindings: " + "%-46s |".format(bindings) + "\n" +
+"|----------------------------------------------------------|")
+
+    if (bindings == null) {
+      //Convert expression to expressionTree
+        val expressionTree = stringToExpressionTree(expression)
+      //Simplify Expression
+        val simplifiedExpressionTree = simplifyExpression(expressionTree)
+        val simplifiedExpressionString = expressionTreeToString(simplifiedExpressionTree)
+        println("| Expression Simplifies To:                                |\n" +
+                "|   %-54s |".format(simplifiedExpressionString))
+        println(" ---------------------------------------------------------- ")
+
+    } else {
+      //Apply Bindings
+    }
+
+    return ""
+  }
+
+def applyBindings (expression: String, bindings: Array[String]) ={
+}
+
+
+
+
+
+
+
+  def isValidExpression(expression: String): Boolean = {
+    //Assume the expression has already been normalized
+    if (expression == "") {
+      if (DEBUG) println("Invalid expression because expression == \"\"")
+      return false
+    }
+    if (expression.charAt(0) != '(') {
+      if (DEBUG) println("Invalid because the first character is '" +
+                         expression.charAt(0) + "' instead of an open paren")
+      return false
+    }
+    if (expression.charAt(expression.length-1) != ')') {
+      if (DEBUG) println("Invalid because expression doesn't end with an open paren")
+      return false
+    }
+    if (expression.length < 7) {
+      if (DEBUG) println("Invalid because expression is less than 7 char long")
+      return false
+    }
+    if (expression.substring(1, 4) != "and" &&
+        expression.substring(1, 4) != "not" &&
+        expression.substring(1, 3) != "or") {
+      if (DEBUG) println("Invalid because the first 2-3 chars after open paren are neither " +
+                         "'and', 'not', nor 'or'")
+      return false
+    }
+    if (expression.substring(1, 3) == "or" && expression.charAt(3) != ' ') {
+      if (DEBUG) println("Invalid because 'or' is not followed by a space")
+      return false
+    }
+    if (expression.substring(1, 4) == "and" || expression.substring(1, 4) == "not") {
+      //  ( a n d   ( n o t   1 )  0 )
+      //  0 1 2 3 4 5 6 7 8 9
+
+      //  ( n o t   x )
+      //  0 1 2 3 4 5 6
+      if (expression.charAt(5) == ')' || expression.charAt(5) == '\\') {
+        if (DEBUG) println("Invalid because operator was followed by an illegal char")
+        return false
+      }
+      if (expression.substring(1, 4) == "and" && expression.charAt(6) == ')') {
+        if (DEBUG) println("Invalid because encountered a closing paren too early in the " +
+                           "first parameter")
+        return false
+      }
+      //Extract Parameters
+      if (expression.substring(1, 4) == "and") {
+        var first = ""
+        var second = ""
+        try {
+          first = extractFirstParam(expression)
+          second = extractSecondParam(expression)
+        } catch {
+          case e: Exception => {
+            if (DEBUG) println("Invalid because at least one of the two parameters consists " +
+                               "of more than one character")
+            return false
+          }
+        }
+        var firstValid = false
+        var secondValid = false
+        if (first.charAt(0) == '(') {
+          firstValid = isValidExpression(first)
+        } else {
+          if (first.length > 1) {
+            if (DEBUG) println("Invalid because the first parameter (" +
+                               first + ") is longer than 1 char and not an expression itself")
+            firstValid = false
+          } else {
+            firstValid = true
+          }
+        }
+        if (second.charAt(0) == '(') {
+          secondValid = isValidExpression(second)
+        } else {
+          if (second.length > 1) {
+            if (DEBUG) println("Invalid because the second parameter (" +
+                               second + ") is longer than 1 char and not an expression itself")
+            secondValid = false
+          } else {
+            secondValid = true
+          }
+        }
+        if (firstValid && secondValid)
+          return true
+        else
+          return false
+      } else {
+        var first = ""
+        try {
+          first = extractFirstParam(expression)
+        } catch {
+          case e: Exception => {
+            if (DEBUG) println("Invalid because the parameter consists of more than one " +
+                               "character")
+              return false
+          }
+        }
+        if (first.charAt(0) == '(') {
+          return isValidExpression(first)
+        } else {
+          if (first.length > 1) {
+            if (DEBUG) println("Invalid because the first and only parameter (" +
+                               first + ") is longer than 1 char and not an expression itself")
+            return false
+          } else {
+            return true
+          }
+        }
+      }
+    } else if (expression.substring(1, 3) == "or") {
+      //  ( o r   ( n o t   1 )  0 )
+      //  0 1 2 3 4 5 6 7 8 9
+
+      if (expression.charAt(4) == ')' || expression.charAt(4) == '\\') {
+        if (DEBUG) println("Invalid because 'or' operator was followed by an illegal char")
+        return false
+      }
+      if (expression.charAt(5) == ')') {
+        if (DEBUG) println("Invalid because encountered a closing paren too early in the " +
+                           "first parameter")
+        return false
+      }
+      //Extract Parameters
+      var first = ""
+      var second = ""
+      try {
+        first = extractFirstParam(expression)
+        second = extractSecondParam(expression)
+      } catch {
+        case e: Exception => {
+          if (DEBUG) println("Invalid because at least one of the two parameters consists " +
+                            "of more than one character")
+          return false
+        }
+      }
+      var firstValid = false
+      var secondValid = false
+      if (first.charAt(0) == '(') {
+        firstValid = isValidExpression(first)
+      } else {
+        if (first.length > 1) {
+          if (DEBUG) println("Invalid because the first parameter (" +
+                             first + ") is longer than 1 char and not an expression itself")
+          firstValid = false
+        } else {
+          firstValid = true
+        }
+      }
+      if (second.charAt(0) == '(') {
+        secondValid = isValidExpression(second)
+      } else {
+        if (second.length > 1) {
+          if (DEBUG) println("Invalid because the second parameter (" +
+                             second + ") is longer than 1 char and not an expression itself")
+          secondValid = false
+        } else {
+          secondValid = true
+        }
+      }
+      if (firstValid && secondValid)
+        return true
+      else
+        return false
+    }
+    return true
+  }
+
+
+
+
+
+
+
+
   def main(args: Array[String]) {
-    val andExpression = createAndExpression("1", "0")
-    println(introString)
+    //val andExpression = createAndExpression("1", "0")
     /*
     val expression = "(and x 1)"
     println("First Parameter = '" + extractFirstParam(expression) + "'")
@@ -503,15 +797,24 @@ object BoolSimp {
     println(simplifiedExpressionTree)
     println(expressionTreeToString(simplifiedExpressionTree))
     */
-    var command = ""
-    do {
+    println(introString)
+    var command = readLine("\nEnter a Command -> ")
+    while (command != "quit") {
+      command = command.trim
+      command = normalizeExpressionString(command)
+      if (command.contains(" help") || command.contains("help "))
+        println(helpString)
+      if (isValidExpression(command)) {
+        //println("Valid Expression!")
+        //Convert command to expressionTree
+        val expressionTree = stringToExpressionTree(command)
+        val simplifiedExpressionTree = simplifyExpression(expressionTree)
+        println(expressionTreeToString(simplifiedExpressionTree))
+        evalxp(command, null)
+      } else {
+        println("Invalid Expression")
+      }
       command = readLine("\nEnter a Command -> ")
-      //Convert command to expressionTree
-      val expressionTree = stringToExpressionTree(command)
-      val simplifiedExpressionTree = simplifyExpression(expressionTree)
-      println(expressionTreeToString(simplifiedExpressionTree))
-    } while (command != "quit")
-    //println(p1.root)
-    //stringToExpressionTree("  ( and  1  ( or(not 1)    1  ) )")
+    }
   }
 }
