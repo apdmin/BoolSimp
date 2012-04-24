@@ -23,10 +23,8 @@ object BoolSimp {
 |   (or 1 0)                                                                   |
 |   ...which simplifies to 1.                                                  |
 |                                                                              |
-| * Note that 'x' could have been bound to, say, 'y'. This would have changed  |
-|   the expression to (or y 0) and the simplificiation to 'y'.                 |
 |                                                                              |
-| ** To access the general help menu, type (help).                             |
+| ** To access the general help menu, type 'help', without the quotes.         |
 |------------------------------------------------------------------------------|
  \----------------------------------------------------------------------------/
    --------------------------------------------------------------------------
@@ -37,29 +35,30 @@ object BoolSimp {
  /------------------------------- General Help -------------------------------\
 |------------------------------------------------------------------------------|
 | General Command Syntax:                                                      |
-|   (keyword argument1 argument2)                                              |
+|   keyword argument1 argument2                                                |
 |                                                                              |
 | Valid Keywords Include:                                                      |
 |   quit                                                                       |
 |   help                                                                       |
 |   evalxp                                                                     |
 |                                                                              |
-| Valid Arguments Include:                                                     |
+| Valid Entries for argument1 Include:                                         |
 |   Any Keyword                                                                |
-|   Expressions                                                                |
-|   Binding Lists                                                              |
+|   Some Expression                                                            |
+|   ** Note that argument1 is optional when the associated keyword = 'help'    |
+|                                                                              |
+| Valid Entries for argument2 Include:                                         |
+|   Binding List... (e.g. (x-1 z-0 y-1) )                                      |
+|   ** Note that argument2 is optional                                         |
 |                                                                              |
 | Example Commands:                                                            |
-|   (quit)                                  --> Exits BoolSimp                 |
-|   (help)                                  --> Displays this help menu        |
-|   (help evalxp)                           --> Displays the evalxp help menu  |
-|   (evalxp (and y 1))                      --> Returns 'Y'                    |
-|   (evalxp (or x 1) ((x 0)))               --> Returns '1'                    |
-|   (evalxp (not (and a b)) ((a x) (b y)))  --> Returns '1'                    |
+|   quit                                    --> Exits BoolSimp                 |
+|   help                                    --> Displays this help menu        |
+|   help evalxp                             --> Displays the evalxp help menu  |
+|   evalxp (and y 1)                        --> Returns 'y'                    |
+|   evalxp (or x 1) (x-0)                   --> Returns '1'                    |
+|   evalxp (not (and a b)) (a-0 b-1)        --> Returns '1'                    |
 |                                                                              |
-| *** One of the most common mistakes is not putting the correct number of     |
-|     parentheses at the end of each command. All open parentheses must have a |
-|     matching closing parenthesis.                                            |
 |------------------------------------------------------------------------------|
  \----------------------------------------------------------------------------/
    --------------------------------------------------------------------------
@@ -70,21 +69,23 @@ object BoolSimp {
  /------------------------------ Help: 'evalxp' ------------------------------\
 |------------------------------------------------------------------------------|
 | Command Syntax:                                                              |
-|   (evalxp boolean-expression optional-binding-list)                          |
+|   evalxp boolean-expression optional-binding-list                            |
 |                                                                              |
 | Valid Boolean Expressions Include:                                           |
-|   (and a1 a2)                                                                |
-|   (or a1 a2)                                                                 |
-|   (not a1)                                                                   |
+|   (and x y)                                                                  |
+|   (or a b)                                                                   |
+|   (not k)                                                                    |
+|   ...where x, y, a, b, k, etc. are arguments                                 |
+|   ** Note: All arguments must be either an expression or a single character  |
+|            i.e. You can't use words as arguments                             |
 |                                                                              |
 | Binding List Syntax:                                                         |
-|   ((var1 bind1) (var2 bind2) (var3 bind3) (var4 bind4) ...)                  |
-|   ...where var1, var2, var3, etc. are variables that appear in an expression |
-|      and bind1, bind2, bind3, etc. are strings for the variables to be bound |
-|      to.                                                                     |
+|   (a-#, b-#, c-#, ...)                                                       |
+|   ...where a, b, c, etc. are variables that appear in an expression          |
+|      and # represents a truth value, indicated by 1 or 0.                    |
 |                                                                              |
 | Example Command:                                                             |
-|   (evalxp (or x (and y z)) ((z 1) (x csc344) (y 0)))    --> Returns 'CSC344' |
+|   evalxp (or x (and y z)) (z-1 y-0)          --> Returns 'x'                 |
 |------------------------------------------------------------------------------|
  \----------------------------------------------------------------------------/
    --------------------------------------------------------------------------
@@ -106,8 +107,8 @@ object BoolSimp {
  /------------------------------- Help: 'quit' -------------------------------\
 |------------------------------------------------------------------------------|
 | Really?! You need help quitting this application??                           |
-| (quit) was the first example given in the 'General Help' section.            |
-| Try taking a look there. All you have to do is enter (help) as a command.    |
+| 'quit' was the first example given in the 'General Help' section.            |
+| Try taking a look there. All you have to do is enter 'help' as a command.    |
 |------------------------------------------------------------------------------|
  \----------------------------------------------------------------------------/
    --------------------------------------------------------------------------
@@ -1100,11 +1101,15 @@ object BoolSimp {
           evalxp(expression, bindingString)
 
         } else {
-            if (command.charAt(7) != '(') {
+            if (command.charAt(7) != '(' || command.length < 9) {
               println(commandEntryError)
             } else {
               //Extract Expression
-                expression = extractExpression(command)
+                try {
+                  expression = extractExpression(command)
+                } catch {
+                  case e: StringIndexOutOfBoundsException => expression = command.substring(7, command.length)
+                }
               //Extract Binding List
                 bindingString = extractBindingString(command,
                                                      expressionStartIndex,
