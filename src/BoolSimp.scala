@@ -4,11 +4,11 @@ import scala.io.Source
 
 object BoolSimp {
 
-  val DEBUG = true;
+  val DEBUG = false;
 
   val introString = """
    --------------------------------------------------------------------------
- /--------------------------------- BoolSimp --------------------------------\
+ /--------------------------------- BoolSimp ---------------------------------\
 |------------------------------------------------------------------------------|
 | Welcome to BoolSimp!                                                         |
 |                                                                              |
@@ -34,7 +34,7 @@ object BoolSimp {
 
   val helpString = """
    --------------------------------------------------------------------------
- /------------------------------- General Help ------------------------------\
+ /------------------------------- General Help -------------------------------\
 |------------------------------------------------------------------------------|
 | General Command Syntax:                                                      |
 |   (keyword argument1 argument2)                                              |
@@ -120,19 +120,31 @@ object BoolSimp {
 | The command you have entered is invalid. Please refer to the help manual     |
 | for information about how to properly use this utility.                      |
 |                                                                              |
-| (help) will bring you to the help manual...                                  |
+| 'help' will bring you to the help manual...                                  |
 |------------------------------------------------------------------------------|
  \----------------------------------------------------------------------------/
    --------------------------------------------------------------------------
 """
 
-  val noListInputError = """
+  val invalidCommand = """
    --------------------------------------------------------------------------
  /--------------------------------- oops... ----------------------------------\
 |------------------------------------------------------------------------------|
 | All commands must be enclosed by parentheses.                                |
 |                                                                              |
-| Type '(help)' (without the quotes) for further assistance.                   |
+| Type 'help' (without the quotes) for further assistance.                     |
+|------------------------------------------------------------------------------|
+ \----------------------------------------------------------------------------/
+   --------------------------------------------------------------------------
+"""
+
+  val commandTooShort = """
+   --------------------------------------------------------------------------
+ /---------------------------------- umm... ----------------------------------\
+|------------------------------------------------------------------------------|
+| Could you be a little more clear? The command you've entered is too short.   |
+|                                                                              |
+| Type 'help' (without the quotes) for further assistance.                     |
 |------------------------------------------------------------------------------|
  \----------------------------------------------------------------------------/
    --------------------------------------------------------------------------
@@ -554,15 +566,29 @@ object BoolSimp {
 
 
 
-  def evalxp (expression: String, bindings: Array[String]): String = {
+  def evalxp (expression: String, bindingStringParam: String): String = {
+    var bindingString = bindingStringParam
+    var bindings: Array[Char] = null
+    if (bindingString != "") {
+      try {
+        bindings = stringToBindingList(bindingString)
+      } catch {
+        case e: Exception => {
+          bindings = null
+          bindingString = bindingString + " --> **INVALID**"
+        }
+      }
+    } else {
+      bindingString = "NONE"
+    }
     println("\n" +
 " ---------------------------------------------------------- \n" +
 "| evalxp                                                   |\n" +
 "|----------------------------------------------------------|")
 
     if (!isValidExpression(expression)) {
-      println("\n" +
-"| Invalid Expression: " + "%36s |".format(expression) + "\n" +
+      println("" +
+"| Invalid Expression: " + "%-36s |".format(expression) + "\n" +
 "| Please check the help menu for proper syntax.            |\n" +
 " ---------------------------------------------------------- ")
       return expression
@@ -570,7 +596,7 @@ object BoolSimp {
 
     println("" +
 "| Expression: " + "%-44s |".format(expression) + "\n" +
-"| Bindings: " + "%-46s |".format(bindings) + "\n" +
+"| Bindings: " + "%-46s |".format(bindingString) + "\n" +
 "|----------------------------------------------------------|")
 
     if (bindings == null) {
@@ -584,14 +610,226 @@ object BoolSimp {
         println(" ---------------------------------------------------------- ")
 
     } else {
-      //Apply Bindings
+      if (isValidBindingList(bindings)) {
+        val expressionTree = stringToExpressionTree(expression)
+        applyBindings(expressionTree, bindings)
+        val newExpression = applyBindings(expression, bindings)
+        println("| After binding, expression becomes:                       |\n" +
+                "|   %-54s |".format(expressionTreeToString(expressionTree)))
+        //Convert expression to ExpressionTree
+          //val expressionTree = stringToExpressionTree(expression)
+        //Simplify Expression
+          val simplifiedExpressionTree = simplifyExpression(expressionTree)
+          val simplifiedExpressionString = expressionTreeToString(simplifiedExpressionTree)
+          println("| Expression then simplifies to:                           |\n" +
+                  "|   %-54s |".format(simplifiedExpressionString))
+          println(" ---------------------------------------------------------- ")
+      } else {
+        println("Invalid binding list")
+      }
     }
 
     return ""
   }
 
-def applyBindings (expression: String, bindings: Array[String]) ={
-}
+  def applyBindings (expression: String, bindings: Array[Char]): String = {
+    //Convert expression string to ExpressionTree
+      val expressionTree = stringToExpressionTree(expression)
+    return applyBindings(expressionTree, bindings)
+  }
+  def applyBindings(expressionTree: ExpressionTree, bindings: Array[Char]): String = {
+    val DEBUGTHIS = false
+    if (DEBUGTHIS) println("--- Beginning call to applyBindings ---")
+    //**Note** This is a recursive method
+    //Determine the operator of expressionTree
+    if (DEBUGTHIS) println("| Determine the operator of the expression")
+    if (expressionTree.root == "and" || expressionTree.root == "or") {
+      if (DEBUGTHIS) println("|   Operator determined to be either 'and' or 'or'")
+      //Check left ExpressionTree
+      if (expressionTree.left.root == "and" ||
+          expressionTree.left.root == "or" ||
+          expressionTree.left.root == "not") {
+        if (DEBUGTHIS) println("| Apply Bindings to left subtree")
+        applyBindings(expressionTree.left, bindings)
+      } else {
+        //expressionTree.left.root should be a single character
+          if (expressionTree.left.root.length > 1) {
+            throw new Error("applyBindings encountered encountered a supposed parameter (" +
+                            expressionTree.left.root + ") that was longer than a single " +
+                            "character")
+          }
+        //Search through binding list...
+          if (DEBUGTHIS) println("| Search through the binding list...")
+          var i = 0
+          while (i < bindings.length-1) {
+            if (DEBUGTHIS) println("|   Check " + bindings(i) + ", located at index " + i)
+            if ((bindings(i) + "") == expressionTree.left.root) {
+              if (DEBUGTHIS) println("|   Found a match!")
+              expressionTree.left.root = bindings(i+1) + ""
+              if (DEBUGTHIS) println("|     Change existing symbol to " + bindings(i+1))
+            }
+            i += 2
+          }
+      }
+      //Check right ExpressionTree
+      if (expressionTree.right.root == "and" ||
+          expressionTree.right.root == "or" ||
+          expressionTree.right.root == "not") {
+        if (DEBUGTHIS) println("| Apply Bindings to right subtree")
+        applyBindings(expressionTree.right, bindings)
+      } else {
+        //expressionTree.right.root should be a single character
+          if (expressionTree.right.root.length > 1) {
+            throw new Error("applyBindings encountered encountered a supposed parameter (" +
+                            expressionTree.right.root + ") that was longer than a single " +
+                            "character")
+          }
+        //Search through binding list...
+          if (DEBUGTHIS) println("| Search through the binding list...")
+          var i = 0
+          while (i < bindings.length-1) {
+            if (DEBUGTHIS) println("|   Check " + bindings(i) + ", located at index " + i)
+            if ((bindings(i) + "") == expressionTree.right.root) {
+              if (DEBUGTHIS) println("|   Found a match!")
+              expressionTree.right.root = bindings(i+1) + ""
+              if (DEBUGTHIS) println("     Change existing symbol to " + bindings(i+1))
+            }
+            i += 2
+          }
+      }
+
+    } else if (expressionTree.root == "not") {
+      if (DEBUGTHIS) println("|   Operator determined to be 'not'")
+      //Check left ExpressionTree
+      if (expressionTree.left.root == "and" ||
+          expressionTree.left.root == "or" ||
+          expressionTree.left.root == "not") {
+        if (DEBUGTHIS) println("| Apply Bindings to left subtree")
+        applyBindings(expressionTree.left, bindings)
+      } else {
+        //expressionTree.left.root should be a single character
+          if (expressionTree.left.root.length > 1) {
+            throw new Error("applyBindings encountered encountered a supposed parameter (" +
+                            expressionTree.left.root + ") that was longer than a single " +
+                            "character")
+          }
+        //Search through binding list...
+          if (DEBUGTHIS) println("| Search through the binding list...")
+          var i = 0
+          while (i < bindings.length-1) {
+            if (DEBUGTHIS) println("|   Check " + bindings(i) + ", located at index " + i)
+            if ((bindings(i) + "") == expressionTree.left.root) {
+              if (DEBUGTHIS) println("|   Found a match!")
+              expressionTree.left.root = bindings(i+1) + ""
+              if (DEBUGTHIS) println("|     Change existing symbol to " + bindings(i+1))
+            }
+            i += 2
+          }
+      }
+
+    } else {
+      throw new Error("Received invalid ExpressionTree as input")
+    }
+    return ""
+  }
+
+  def isValidBindingList(bindings: Array[Char]): Boolean = {
+    for (i <- 0 until bindings.length) {
+      if (i == 0) {
+        if (bindings(i) == '0' || bindings(i) == '1')
+          return false
+      } else {
+        if (bindings(i) == '0' || bindings(i) == '1') {
+          if (bindings(i-1) == '0' || bindings(i-1) == '1')
+            return false
+        } else {
+          if (bindings(i-1) != '0' && bindings(i-1) != '1')
+            return false
+        }
+      }
+    }
+    return true
+  }
+
+
+
+  def stringToBindingList (input: String): Array[Char] = {
+    val DEBUGTHIS = DEBUG
+    if (DEBUGTHIS) println("------ Beginning call to stringToBindingList -----")
+    /*
+    Binding list should look like this...
+      (x-1 y-0 d-1 j-1)
+    */
+    var bindings = new Array[Char]((input.length)/2) //could probably be (length-1)/2
+    if (DEBUGTHIS) println("| Created bindings: Array[Char] with size: " + input.length/2)
+    var previousWasSymbol = false
+    var bindingIndex = 0
+    if (input.charAt(0) != '(') {
+      if (DEBUGTHIS) println("| Throw exception because input did not begin with an " +
+                             "open paren")
+      throw new Exception("Input did not begin with an open paren")
+    }
+    if (input.charAt(input.length-1) != ')') {
+      if (DEBUGTHIS) println("| Throw exception because input did not end with a " +
+                            "closing paren")
+      throw new Exception("Input did not end with a closing paren")
+    }
+
+    if (DEBUGTHIS) println("| Entering for loop")
+    for (i <- 1 until input.length) {
+      if (DEBUGTHIS) println("|   i = " + i)
+      val previousChar = input.charAt(i-1)
+      if (DEBUGTHIS) println("|     previousChar = " + previousChar)
+      if (previousChar == '(' || previousChar == ' ') {
+        //We have a symbol
+          if (DEBUGTHIS) println("|     " + input.charAt(i) + " should be a symbol because "+
+                                 "previousChar was " + previousChar)
+          if (input.charAt(i) == '0' || input.charAt(i) == '1') {
+            throw new Exception("Encountered a " + input.charAt(i) + " where there " +
+                                "should have been a symbol")
+          }
+          if (previousWasSymbol)
+            throw new Exception("Encountered two symbols in a row")
+        //Add it to the character array
+          if (DEBUGTHIS) println("|     Add " + input.charAt(i) + " to bindings at index: " +
+                                 bindingIndex)
+          bindings(bindingIndex) = input.charAt(i)
+          bindingIndex += 1
+          previousWasSymbol = true
+          if (DEBUGTHIS) println("|     previousWasSymbol now set to " + previousWasSymbol)
+      } else if (previousChar == '-') {
+        //We have a 0 or 1
+          if (input.charAt(i) != '0' && input.charAt(i) != '1')
+            throw new Exception("Encountered '" + input.charAt(i) + "' where there " +
+                                "should have been a 1 or 0")
+          if (!previousWasSymbol)
+            throw new Exception("Encountered two 0/1 in a row")
+        //Add it to the character array
+          if (DEBUGTHIS) println("|     Add " +input.charAt(i) + " to bindings at index: " +
+                                 bindingIndex)
+          bindings(bindingIndex) = input.charAt(i)
+          bindingIndex += 1
+          previousWasSymbol = false
+          if (DEBUGTHIS) println("|     previousWasSymbol now set to " + previousWasSymbol)
+      } else {
+        //Invalid input string
+        /*
+        throw new Error("stringToBindingList received an invalid input string\n" +
+                        "   " + input)
+        */
+      }
+    }
+    if (DEBUGTHIS) {
+      println("| Resulting binding list is:")
+      var debugOutput = "  |"
+      for (i <- 0 until bindings.length) {
+        debugOutput = debugOutput + bindings(i) + "|"
+      }
+      println("   " + debugOutput)
+      println("------ Ending call to stringToBindingList ------")
+    }
+    return bindings
+  }
 
 
 
@@ -771,50 +1009,116 @@ def applyBindings (expression: String, bindings: Array[String]) ={
 
 
 
+  def extractBindingString(command: String, expressionStartIndex: Int, expressionLength: Int): String = {
+    var bindingListStartIndex = expressionStartIndex + expressionLength + 1
+    if (command.length > bindingListStartIndex + 1)
+      return command.substring(bindingListStartIndex, command.length)
+    else
+      return ""
+  }
+
+
+
+
+  def extractExpression(command: String): String = {
+    //For now, assume command will always be an evalxp command
+    var startingIndex = 0
+    while (startingIndex < command.length-1 && command.charAt(startingIndex) != ' ') {
+      startingIndex += 1
+    }
+
+    var parenCount = 0
+    var index = startingIndex + 1
+    var expression = ""
+    do {
+      if (command.charAt(index) == '(')
+        parenCount += 1
+      else if (command.charAt(index) == ')')
+        parenCount -= 1
+      expression = expression + command.charAt(index)
+      index += 1
+    } while (parenCount > 0)
+    return expression
+  }
+
+
 
 
 
   def main(args: Array[String]) {
-    //val andExpression = createAndExpression("1", "0")
-    /*
-    val expression = "(and x 1)"
-    println("First Parameter = '" + extractFirstParam(expression) + "'")
-    println("Second Parameter = '" + extractSecondParam(expression) + "'")
-    println(stringToExpressionTree(expression))
-    println(p1)
-    println("p1 = " + expressionTreeToString(p1))
-    println("p2 = " + expressionTreeToString(p2))
-    println("p3 = " + expressionTreeToString(p3))
-    println("-------Time to test----------")
-    println("We start with this expression: " + expression)
-    //val expressionTree = stringToExpressionTree(expression)
-    println("After converting the expression to an ExpressionTree and then")
-    println("converting it back, we get: " +
-            expressionTreeToString(expressionTree)
-           )
-    //val simplifiedExpressionTree = simplifyExpression(expressionTree)
-    println(expressionTree)
-    println(simplifiedExpressionTree)
-    println(expressionTreeToString(simplifiedExpressionTree))
-    */
     println(introString)
     var command = readLine("\nEnter a Command -> ")
     while (command != "quit") {
       command = command.trim
       command = normalizeExpressionString(command)
-      if (command.contains(" help") || command.contains("help "))
-        println(helpString)
-      if (isValidExpression(command)) {
-        //println("Valid Expression!")
-        //Convert command to expressionTree
-        val expressionTree = stringToExpressionTree(command)
-        val simplifiedExpressionTree = simplifyExpression(expressionTree)
-        println(expressionTreeToString(simplifiedExpressionTree))
-        evalxp(command, null)
+      if (DEBUG) println(command)
+      if (command.length < 4) {
+        println(commandTooShort)
+      } else if (command.substring(0, 4) == "help") {
+        if (command.contains("evalxp"))
+          println(helpEvalxp)
+        else if (command.substring(4, command.length).contains("help"))
+          println(helpHelp)
+        else if (command.contains("quit"))
+          println(helpQuit)
+        else
+          println(helpString)
+      } else if (command.length > 7 && command.substring(0, 7) == "evalxp ") {
+        var expression = ""
+        val expressionStartIndex = 7
+        var bindingString = ""
+        var bindingListStartIndex = expressionStartIndex //+ expression.length + 1
+
+        if (command.length >= 9 && command.substring(7, 9) == "p1") {
+          //Extract Expression
+            expression = expressionTreeToString(p1)
+          //Extract Binding List
+            bindingString = extractBindingString(command,
+                                                 expressionStartIndex,
+                                                 2)
+          if (DEBUG) println("bindings = " + bindingString)
+          evalxp(expression, bindingString)
+
+        } else if (command.length >= 9 && command.substring(7, 9) == "p2") {
+          //Extract Expression
+            expression = expressionTreeToString(p2)
+          //Extract Binding List
+            bindingString = extractBindingString(command,
+                                                 expressionStartIndex,
+                                                 2)
+          if (DEBUG) println("bindings = " + bindingString)
+          evalxp(expression, bindingString)
+
+        } else if (command.length >= 9 && command.substring(7, 9) == "p3") {
+          //Extract Expression
+            expression = expressionTreeToString(p3)
+          //Extract Binding List
+            bindingString = extractBindingString(command,
+                                                 expressionStartIndex,
+                                                 2)
+          if (DEBUG) println("bindings = " + bindingString)
+          evalxp(expression, bindingString)
+
+        } else {
+            if (command.charAt(7) != '(') {
+              println(commandEntryError)
+            } else {
+              //Extract Expression
+                expression = extractExpression(command)
+              //Extract Binding List
+                bindingString = extractBindingString(command,
+                                                     expressionStartIndex,
+                                                     expression.length)
+              if (DEBUG) println("bindings = " + bindingString)
+              evalxp(expression, bindingString)
+            }
+        }
       } else {
-        println("Invalid Expression")
+        println(commandEntryError)
       }
       command = readLine("\nEnter a Command -> ")
     }
+    if (command == "quit")
+      println(thanks)
   }
 }

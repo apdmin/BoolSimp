@@ -1,6 +1,6 @@
 //package hw3
 
-class ExpressionTree(val root: String, val left: ExpressionTree, val right: ExpressionTree) {
+class ExpressionTree(var root: String, val left: ExpressionTree, val right: ExpressionTree) {
 
   def isEmpty: Boolean = {
     if (root == null) return true
