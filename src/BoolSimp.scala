@@ -1,10 +1,16 @@
-//package hw3
-//import hw3.ExpressionTree
+/*
+   --------------------
+ /     Drew Darwin      \
+| Written in Scala 2.9.1 |
+ \     Spring 2012      /
+   --------------------
+*/
+
 import scala.io.Source
 
 object BoolSimp {
 
-  val DEBUG = false;
+  val DEBUG = false
 
   val introString = """
    --------------------------------------------------------------------------
@@ -813,6 +819,12 @@ object BoolSimp {
           previousWasSymbol = false
           if (DEBUGTHIS) println("|     previousWasSymbol now set to " + previousWasSymbol)
       } else {
+        if (!(input.charAt(i) == '(') &&
+            !(input.charAt(i) == ')') &&
+            !(input.charAt(i) == ' ') &&
+            !(input.charAt(i) == '-'))
+          throw new Exception("Encountered a symbol or truth value that took up more than " +
+                              "one character")
         //Invalid input string
         /*
         throw new Error("stringToBindingList received an invalid input string\n" +

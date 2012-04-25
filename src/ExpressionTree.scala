@@ -1,4 +1,10 @@
-//package hw3
+/*
+   --------------------
+ /     Drew Darwin      \
+| Written in Scala 2.9.1 |
+ \     Spring 2012      /
+   --------------------
+*/
 
 class ExpressionTree(var root: String, val left: ExpressionTree, val right: ExpressionTree) {
 
